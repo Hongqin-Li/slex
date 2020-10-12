@@ -1,5 +1,5 @@
-slex: slex.c
-	cc slex.c -o slex
+slex: slex.cc
+	g++ slex.cc -o slex
 
 clean:
 	rm -f slex *.pdf *.dot
