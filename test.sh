@@ -1,4 +1,4 @@
 make
-cat example.l | ./slex > g.dot
-dot -Tpdf g.dot -o g.dot.pdf
+cat example.l | ./obj/slex > obj/g.dot
+dot -Tpdf obj/g.dot -o obj/g.dot.pdf
 # echo $1 | ./a.out | dot -Tpdf -o g.dot.pdf

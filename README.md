@@ -1,1 +1,1 @@
-# Simple Lex in C++
+# Simple Lexical Analyzer Generator in C++

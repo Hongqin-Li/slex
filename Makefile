@@ -1,7 +1,8 @@
-slex: slex.cc
-	g++ slex.cc -o slex
+obj/slex: slex.cc debug.h
+	mkdir -p obj/
+	g++ slex.cc -o obj/slex
 
 clean:
-	rm -f slex *.pdf *.dot
+	rm -rf obj/
 
-.PHONY: clean
+.PHONY: test clean

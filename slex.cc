@@ -1,14 +1,5 @@
-#include <cstdio>
-#include <cstring>
-#include <cassert>
-
-#include <iostream>
-#include <functional>
-#include <queue>
-#include <set>
-#include <map>
-#include <unordered_map>
-#include <vector>
+#include <bits/stdc++.h>
+#include "debug.h"
 using namespace std;
 
 inline int SPECIAL(int i) { return -i; }
@@ -36,7 +27,10 @@ static void gstat(int r) {
       int v = edge[i].to, w = edge[i].w;
       printf("n%d -> n%d ", u, v);
       if (w == 0) ;
-      else if (w > 0) printf("[label=\"%c\"]", w);
+      else if (w > 0) {
+        if (w == '"' || w == '\\') printf("[label=\"\\%c\"]", w);
+        else printf("[label=\"%c\"]", w);
+      }
       else printf("[label=\"%c(s)\"]", -w);
       printf(";\n");
       if (!vis[v]) stat1(v);
@@ -65,10 +59,6 @@ int eat(char **ps) {
     }
   }
   ++*ps;
-  
-  // if (c == 0) printf("eat: \n");
-  // else if (c > 0) printf("eat: '%c'\n", c);
-  // else printf("eat: '%c'(s)\n", -c);
   return c;
 }
 
@@ -95,36 +85,50 @@ NFA nfa_alt(NFA a, NFA b) {
   return a;
 }
 
+// TODO check me
 NFA charset(char **ps) {
   assert(**ps != '\0');
-  int h = nalloc(), t = nalloc();
-  int c;
+  int h = nalloc(), t = nalloc(), comp = 0, c;
   if ((c = eat(ps)) == SPECIAL('[')) {
+    if (**ps == '^') {
+      ++*ps;
+      comp = 1;
+    }
+    int valid[128];
+    valid[0] = 0;
+    for (int i = 1; i < 128; i++)
+      valid[i] = comp;
+
     for (int start, span = 0; (c = eat(ps)) != SPECIAL(']') && c != '\0'; ) {
-      if (c == SPECIAL('-')) {  
+      if (c == SPECIAL('-'))
         span = 1;
-      } else if (span) {
-        assert(start < c);
+      else if (!span)
+        start = c, valid[c] = !comp;
+      else {
+        assert(1 < start && start < c && c < 128);
         for (int i = start + 1; i <= c; i++)
-          addedge(h, t, i);
+          valid[i] = !comp;
         span = 0;
-      } else {
-        start = c;
-        addedge(h, t, c);
       }
     }
+    for (int i = 0; i < 128; i++)
+      if (valid[i]) addedge(h, t, i);
   } else addedge(h, t, c);
   return {h, t};
 }
 
-// TODO support '+'
-NFA repete(NFA a, char **ps) {
+/* Repetion of the NFA constructed by span [begin, *ps). */
+NFA repete(NFA a, char **ps, char *begin) {
   switch (**ps) {
     case '*':
       addedge(a.tail, a.head, 0);
     case '?':
       addedge(a.head, a.tail, 0);
       ++*ps;
+      return a;
+    case '+':
+      **ps = '*';
+      *ps = begin;
       return a;
   }
   return a;
@@ -135,6 +139,7 @@ NFA parse(char **ps) {
   NFA res = {nalloc(), nalloc()}, cur = nfa_empty();
   for (int stop = 0; !stop; ) {
     NFA a;
+    char *begin;
     switch (**ps) {
     case '\0':
     case ')':
@@ -147,15 +152,16 @@ NFA parse(char **ps) {
       ++*ps;
       break;
     case '(':
-      ++*ps;
+      begin = (*ps)++;
       a = parse(ps);
       assert(**ps == ')');
       ++*ps;
-      cur = nfa_cat(cur, repete(a, ps));
+      cur = nfa_cat(cur, repete(a, ps, begin));
       break;
     default:
+      begin = *ps;
       a = charset(ps);
-      cur = nfa_cat(cur, repete(a, ps));
+      cur = nfa_cat(cur, repete(a, ps, begin));
     }
   }
   return res;
@@ -206,9 +212,11 @@ int prule(const set<int>& s) {
   return r;
 }
 
-/* Convert NFA to DFA. */
-int n2d(NFA a) {
-  // FIXME
+/*
+ * Convert NFA to DFA.
+ * Return DFA nodes in a order of BFS from the head node.
+ */
+vector<int> convert(NFA a) {
   vector<int> alpha;
   for (int i = 1; i < 128; i++) alpha.push_back(i);
 
@@ -220,10 +228,10 @@ int n2d(NFA a) {
   ss[u0 = nalloc()] = s0;
   node[u0].rule = prule(s0);
 
-  queue<int> q;
-  q.push(u0);
-  for (; q.size(); q.pop()) {
-    int u = q.front();
+  vector<int> q;
+  q.push_back(u0);
+  for (int front = 0; front < q.size(); front++) {
+    int u = q[front];
     for (auto c: alpha) {
       auto s = dfaedge(ss[u], c);
       if (s.size()) {
@@ -231,26 +239,91 @@ int n2d(NFA a) {
         if (!v) {
           ss[v = nalloc()] = s;
           node[v].rule = prule(s);
-          q.push(v);
+          q.push_back(v);
         }
         addedge(u, v, c);
       }
     }
   }
-  return u0;
+  return q;
+}
+
+/* Dump c code of NFA. */
+string dump(const vector<int>& ns, vector<string> act) {
+  int n = ns.size();
+  vector<vector<int>> trans(n+1, vector<int>(128, 0));
+
+  map<int, int> ni;
+  for (int i = 0; i < n; i++) ni[ns[i]] = i+1;
+  for (auto u: ns) {
+    for (int i = node[u].head; i; i = edge[i].nxt) {
+      int v = edge[i].to, w = edge[i].w;
+      assert(0 < w && w < 128);
+      trans[ni[u]][w] = ni[v];
+    }
+  }
+
+  string code;
+  code += "/* Transition table. */\n";
+  code += "int trans[][128] = {\n";
+  for (auto v: trans) {
+    code += "  {";
+    for (auto x: v) code += to_string(x) + ", ";
+    code += "},\n";
+  }
+  code += "};\n";
+
+  code += "\n/* Action functions. */\n";
+  for (int i = 0; i < act.size(); i++)
+    code += "void act" + to_string(i+1) + "() {" + act[i] + "}\n";
+
+  code += "\n/* Action table. */\n";
+  code += "void (*action[])() = {\n  0,\n";
+  for (auto u: ns) {
+    if (node[u].rule) code += "  act" + to_string(node[u].rule) + ",\n";
+    else code += "  0,\n";
+  }
+  code += "};\n";
+
+  code += R"(
+/*
+ * Feed in the chars of beginning at s, call the
+ * action function of matched final state.
+ * Return the length of the next token.
+ */
+int nxt(char *s) {
+  static int cur = 1;
+  int u = cur, preu = 0, prei;
+  for (int i = 0; s[i] && (u = trans[u][s[i]]); i++)
+    if (action[u]) preu = u, prei = i;
+  assert(preu);
+  action[cur = preu]();
+  return prei + 1;
+}
+  )";
+
+  return code;
 }
 
 int main() {
+  /* Read the next non-empty line from stdin. */
+  auto get1 = [](string& s) {
+    while (getline(cin, s) && !s.length()) ;
+    return s.length();
+  };
   int h = nalloc(), t = nalloc();
-  vector<string> rule;
-  for (string s; getline(cin, s); ) {
-    rule.push_back(s);
-    char *cs = &s[0];
-    NFA a = parse(&cs);
+  vector<string> rule, action;
+  for (string sr, sa; get1(sr) && get1(sa); ) {
+    rule.push_back(sr);
+    action.push_back(sa);
+    char *s = &sr[0];
+    NFA a = parse(&s);
     node[a.tail].rule = rule.size();
     addedge(h, a.head, 0);
     addedge(a.tail, t, 0);
   }
-  gstat(n2d({h, t}));
+  debug(rule, action);
+  // gstat(convert({h, t})[0]);
+  cout << dump(convert({h, t}), action);
   return 0;
 }
