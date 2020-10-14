@@ -85,7 +85,6 @@ NFA nfa_alt(NFA a, NFA b) {
   return a;
 }
 
-// TODO check me
 NFA charset(char **ps) {
   assert(**ps != '\0');
   int h = nalloc(), t = nalloc(), comp = 0, c;
@@ -94,8 +93,7 @@ NFA charset(char **ps) {
       ++*ps;
       comp = 1;
     }
-    int valid[128];
-    valid[0] = 0;
+    int valid[128] = {0};
     for (int i = 1; i < 128; i++)
       valid[i] = comp;
 
@@ -293,9 +291,16 @@ string dump(const vector<int>& ns, vector<string> act) {
  */
 int nxt(char *s) {
   static int cur = 1;
+  printf("nxt(%p): %s\n", s, s);
   int u = cur, preu = 0, prei;
-  for (int i = 0; s[i] && (u = trans[u][s[i]]); i++)
-    if (action[u]) preu = u, prei = i;
+  for (int i = 0; s[i] && (u = trans[u][s[i]]); i++) {
+    printf("u: %d\n", u);
+    if (action[u]) {
+      preu = u, prei = i;
+      printf("action[%d]: %p, i: %d\n", u, action[u], i);
+    }
+  }
+  printf("cur: %d\n", preu);
   assert(preu);
   action[cur = preu]();
   return prei + 1;
@@ -306,11 +311,21 @@ int nxt(char *s) {
 }
 
 int main() {
+  string s;
+  while (getline(cin, s))
+    if (s.size() >= 3 && s.substr(0, 3) == "---") break;
+    else cout << s << '\n';
+
   /* Read the next non-empty line from stdin. */
-  auto get1 = [](string& s) {
-    while (getline(cin, s) && !s.length()) ;
+  auto get1 = [](string& s) -> int {
+    while (getline(cin, s)) {
+      if (s.size() == 0) continue;
+      if (s.size() >= 3 && s.substr(0, 3) == "---") return 0;
+      else return s.length();
+    };
     return s.length();
   };
+ 
   int h = nalloc(), t = nalloc();
   vector<string> rule, action;
   for (string sr, sa; get1(sr) && get1(sa); ) {
@@ -323,7 +338,12 @@ int main() {
     addedge(a.tail, t, 0);
   }
   debug(rule, action);
-  // gstat(convert({h, t})[0]);
-  cout << dump(convert({h, t}), action);
+
+  // cout << dump(convert({h, t}), action);
+
+  // while (getline(cin, s)) cout << s << '\n';
+
+  gstat(convert({h, t})[0]);
+
   return 0;
 }

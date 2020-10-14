@@ -1,4 +1,8 @@
 make
-cat example.l | ./obj/slex > obj/g.dot
+# cat example.cc | ./obj/slex > obj/lex.cc
+# g++ obj/lex.cc -o obj/lex
+# cat example.c | ./obj/lex
+
+cat example.cc | ./obj/slex > obj/g.dot 
 dot -Tpdf obj/g.dot -o obj/g.dot.pdf
 # echo $1 | ./a.out | dot -Tpdf -o g.dot.pdf
