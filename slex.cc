@@ -49,6 +49,7 @@ int eat(char **ps) {
     ++*ps;
     switch (**ps) {
     case 'n': c = '\n'; break;
+    case 't': c = '\t'; break;
     default: c = **ps;
     }
   } else {
@@ -290,19 +291,11 @@ string dump(const vector<int>& ns, vector<string> act) {
  * Return the length of the next token.
  */
 int nxt(char *s) {
-  static int cur = 1;
-  printf("nxt(%p): %s\n", s, s);
-  int u = cur, preu = 0, prei;
-  for (int i = 0; s[i] && (u = trans[u][s[i]]); i++) {
-    printf("u: %d\n", u);
-    if (action[u]) {
-      preu = u, prei = i;
-      printf("action[%d]: %p, i: %d\n", u, action[u], i);
-    }
-  }
-  printf("cur: %d\n", preu);
+  int u = 1, preu = 0, prei;
+  for (int i = 0; s[i] && (u = trans[u][s[i]]); i++)
+    if (action[u]) preu = u, prei = i;
   assert(preu);
-  action[cur = preu]();
+  action[preu]();
   return prei + 1;
 }
   )";
@@ -312,9 +305,10 @@ int nxt(char *s) {
 
 int main() {
   string s;
+  bool graph_only = false;
   while (getline(cin, s))
     if (s.size() >= 3 && s.substr(0, 3) == "---") break;
-    else cout << s << '\n';
+    else if (!graph_only) cout << s << '\n';
 
   /* Read the next non-empty line from stdin. */
   auto get1 = [](string& s) -> int {
@@ -338,12 +332,10 @@ int main() {
     addedge(a.tail, t, 0);
   }
   debug(rule, action);
-
-  // cout << dump(convert({h, t}), action);
-
-  // while (getline(cin, s)) cout << s << '\n';
-
-  gstat(convert({h, t})[0]);
-
+  if (graph_only) gstat(convert({h, t})[0]);
+  else {
+    cout << dump(convert({h, t}), action);
+    while (getline(cin, s)) cout << s << '\n';
+  }
   return 0;
 }

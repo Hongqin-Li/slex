@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 
-enum { SPACE, IF, ELSE, INT, OP_EQ, ASSIGN, ID, NUM, REAL, STRING };
+enum { SPACE = 128, IF, ELSE, INT, OP_EQ, ASSIGN, RETURN, ID, NUM, REAL, STRING };
 
 int token;
 
@@ -14,11 +14,28 @@ if
 int
   token = INT;
 
+return
+  token = RETURN;
+
 ==
   token = OP_EQ;
 
 =
-  token = ASSIGN;
+  token = '=';
+;
+  token = ';';
+\(
+  token = '(';
+\)
+  token = ')';
+\[
+  token = '[';
+\]
+  token = ']';
+{
+  token = '{';
+}
+  token = '}';
 
 [ \t\n]+
   token = SPACE;
@@ -32,7 +49,7 @@ int
 ([0-9][0-9]*\.[0-9]*)|([0-9]*\.[0-9][0-9]*)
   token = REAL;
 
-"(\\.|[^\\"\n])*"
+"(\\[^]|[^\\"\n])*"
   token = STRING;
 ---
 
@@ -43,7 +60,8 @@ int main() {
   cout << str;
   for (char *s = &str[0]; *s; ) {
     int n = nxt(s);
-    cout << "find token of type " << token << ": " << str.substr(s - &str[0], n) << '\n';
+    if (token != SPACE)
+      cout << "find token of type " << token << ": " << str.substr(s - &str[0], n) << '\n';
     s += n;
     cout << "n: " << n << '\n';
   }
