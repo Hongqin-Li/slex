@@ -23,10 +23,10 @@ Only non-empty lines inside the first block surrounded by `---` will be parsed b
 - Support expression or syntax like `apple|orange`.
 - `| [ ] ( ) * ? + -` are all of the special characters and should be escaped by `\` whenever they are representing an actual character(even inside charset, like `[\*\?\(\+]`).
 - Among all non-printing ascii characters, we only support `\n \t` for now.
-- The Dot `.` syntax, representing "all" characters, is not supported since it's hard and useless for slex to argue about whether characters like `\n` should be dotted.
+- The Dot `.` syntax, representing "all" characters, is not supported since it's useless for slex to argue about whether characters like `\n` should be dotted. Instead, try something like `[^]` or `[^\n]`.
 
 ### Example
 
 A simple example can be found in `test.sh`.
 
-It first feed `lex.cc` into `slex` to generate the lexer source code `obj/lex.cc`, and then use this lexer to parse a simple C program `prog.c`.
+It first inputs `lex.cc` into `slex` to generate the lexer source code `obj/lex.cc`, which is then used to parse a simple C program `prog.c`.
