@@ -1,3 +1,5 @@
+> This repository has been merged into [compiler-tools](https://github.com/Hongqin-Li/compiler-tools).
+
 # Simple Lexical Analyzer Generator in C++
 
 This is a simple lexical analyzer (lexer) generator in C++. It's similar to flex, but is mainly written and used for teaching, as a guide to the lexical analysis part of compilers. Although it is minimal, it supports exactly what we need to create a real lexer for C language.
